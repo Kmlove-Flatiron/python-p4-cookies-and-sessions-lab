@@ -14,6 +14,7 @@ app.json.compact = False
 migrate = Migrate(app, db)
 
 db.init_app(app)
+app.secret_key = 'your-secret-key'
 
 @app.route('/clear')
 def clear_session():
@@ -22,13 +23,27 @@ def clear_session():
 
 @app.route('/articles')
 def index_articles():
+    articles = [article.to_dict() for article in Article.query.all()]
+    return make_response(articles, 200)
 
-    pass
-
-@app.route('/articles/<int:id>')
+@app.route('/articles/<int:id>', methods=['GET'])
 def show_article(id):
+    article = Article.query.filter_by(id=id).first()
 
-    pass
+    # Check if 'page_views' exists in the session, and set it to 0 if it doesn't
+    session['page_views'] = session.get('page_views', 0)
+
+    # Increment the page view count for the user
+    session['page_views'] += 1
+
+    # Check if the user has viewed 3 or fewer pages
+    if session['page_views'] <= 3:
+
+        return make_response(article.to_dict(), 200)
+
+    # User has viewed more than 3 pages, return an error message
+    error_message = {'message': 'Maximum pageview limit reached'}
+    return make_response(error_message, 401)
 
 if __name__ == '__main__':
     app.run(port=5555)
